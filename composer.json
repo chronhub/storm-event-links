@@ -1,0 +1,28 @@
+{
+    "name": "chronhub/storm-event-links",
+    "description": "Storm EventLinks — the derived-stream link bookkeeping: schema and read side.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["ddd", "cqrs", "event-sourcing", "derived-stream", "event-links"],
+    "require": {
+        "php": ">=8.5",
+        "chronhub/storm-chronicler": "self.version",
+        "chronhub/storm-stream": "self.version",
+        "doctrine/dbal": "^4.0",
+        "symfony/dependency-injection": "^8.1"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.2.8",
+        "phpunit/phpunit": "^13.3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Storm\\EventLinks\\": "./"
+        },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
