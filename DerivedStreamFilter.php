@@ -31,9 +31,8 @@ use Storm\Stream\StreamName;
  * - The yielded EventRecord still carries its global `sequence_no` as its position; `target_position`
  *   is only the ordering key within this derived stream.
  *
- * - A resume cursor reading after a `target_position` is intentionally absent: no current reader needs
- *   it, and a folding consumer's checkpoint semantics, `target_position` versus the global
- *   `sequence_no`, are undecided, to be added when that consumer lands.
+ * - A resume cursor reading after a `target_position` is intentionally absent from this browse.
+ *   The folding consumer resumes on the global `sequence_no` through `DerivedStreamProjectionFilter`.
  *
  * Turns `event_links` from write-only bookkeeping into a BOUNDED browse for LiveQuery `inspect`:
  * truncation at `limit` is indistinguishable from a complete stream, which a browse tolerates. A

@@ -40,20 +40,21 @@ with different lifetimes:
   below its checkpoint. Behind the head, un-linked positions are legitimate and folded as a tail;
   ahead of it, nothing is decided — so wait, never skip.
 
-- **`DerivedStreamRevision` is an identity.** It changes only on a destructive rebuild and is read
-  once per run. A consumer's checkpoint claims "everything linked up to here is folded", which is an
-  assertion about a *set*, not a position — and a rebuild can change that set *below* the checkpoint
-  without moving it. Nothing in the stream's own shape reveals it: `max(source_sequence)` is
-  unchanged or higher, and target positions are dense either way. The revision is the missing
-  witness, stamped on the consumer's row while its checkpoint is still 0 and compared on every later
-  run.
+- **`DerivedStreamRevision` is an identity.** It changes only on a destructive rebuild and is
+  checked at run start, on each processing cycle, and by freshness checks outside a run. A
+  consumer's checkpoint claims "everything linked up to here is folded", which is an assertion
+  about a *set*, not a position — and a rebuild can change that set *below* the checkpoint without
+  moving it. Nothing in the stream's own shape reveals it: `max(source_sequence)` is unchanged or
+  higher, and target positions are dense either way. The revision is the missing witness, stamped
+  on the consumer's row while its checkpoint is still 0 and compared during later runs and
+  freshness checks.
 
 ## Reading a derived stream
 
 Two filters, two jobs:
 
 ```
-DerivedStreamFilter            ORDER BY l.target_position   -- browse, link-write order, unbounded
+DerivedStreamFilter            ORDER BY l.target_position   -- browse, link-write order, default limit 1000
 DerivedStreamProjectionFilter  ORDER BY e.sequence_no       -- fold, checkpoint < seq <= safe head
 ```
 
@@ -71,8 +72,8 @@ Either way the yielded `EventRecord` still carries its global `sequence_no` as i
 ## Design decisions
 
 - **No foreign key to `event_store`.** `sequence_no` is globally unique through one identity
-  sequence and the store is append-only, so orphan links cannot exist; this also avoids the
-  partitioned-table FK warnings.
+  sequence. Erasing a stream can leave orphan links, which the readers exclude through their inner
+  join to `event_store`; omitting the FK also avoids the partitioned-table FK warnings.
 - **Two tables, not one.** The links are the stream's content, the revision is the stream's
   identity, and they change on entirely different clocks.
 - **A revision row appears on the first destructive rebuild**, never on ordinary linking — so a
@@ -80,9 +81,8 @@ Either way the yielded `EventRecord` still carries its global `sequence_no` as i
   which is why the absent row needs no backfill.
 - **The bump and the delete share one statement**, a data-modifying CTE in `EventLinkWriter`, so the
   revision and the links it describes cannot drift apart.
-- **No resume cursor on `target_position`.** No current reader needs it, and the checkpoint
-  semantics a folding consumer would want — `target_position` versus the global `sequence_no` — are
-  undecided; it lands when that consumer does.
+- **No resume cursor on `target_position`.** The browse has no position cursor. A folding consumer
+  uses `DerivedStreamProjectionFilter`, which resumes on the global `sequence_no`.
 
 ## Tests
 

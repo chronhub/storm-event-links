@@ -17,15 +17,16 @@ use Storm\Stream\StreamName;
  * routed through bump + reset, whose replay may link a source position lower than what the consumer
  * already passed. Nothing in the stream's own shape reveals that: `max(source_sequence)` is unchanged or
  * higher, and target positions are dense either way. The revision is the missing identity, stamped onto
- * the consumer's row while its checkpoint is 0 and compared on every later run.
+ * the consumer's row while its checkpoint is 0 and compared during later runs and freshness checks.
  *
- * Deliberately a separate port from DerivedStreamHead, not a second method on it: the head is a FRONTIER
+ * Deliberately a separate port from `DerivedStreamHead`, not a second method on it: the head is a FRONTIER
  * that moves with every link and is read per batch, the revision is an IDENTITY that changes only on a
- * rebuild and is read once per run. Same table family, different lifetimes and different callers.
+ * rebuild. It is checked at run start, on each processing cycle, and by freshness checks outside a run.
+ * Same table family, different lifetimes and different callers.
  *
  * @see DerivedStreamHead
  * @see \Storm\Projector\Link\EventLinkWriter::deleteLinks()
- * @see \Storm\Projector\Run\ProjectionRunner the run-start gate consuming this
+ * @see \Storm\Projector\Run\ProjectionRunner the per-cycle revision check
  */
 interface DerivedStreamRevision
 {
